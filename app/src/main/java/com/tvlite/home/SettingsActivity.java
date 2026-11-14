@@ -167,6 +167,25 @@ public class SettingsActivity extends Activity {
         header("تعديل الأوقات بالدقائق");
         for (int i = 0; i < 6; i++) add(new Number(PrayerTimes.NAMES[i], "adj_" + i, 0, -30, 30, "دقيقة", true));
 
+        header("دقات الساعة");
+        add(new Number("الدقات", "chimes", Chimes.OFF, 0, 2, "", false) {
+            String value() {
+                int v = prefs.getInt(key, def);
+                return v == Chimes.QUARTERS ? "كل ربع ساعة + عدد الساعة" : v == Chimes.HOURS ? "عدد الساعة كل ساعة" : "موقّفة";
+            }
+            void change(int dir) { prefs.edit().putInt(key, ((prefs.getInt(key, def) + dir) % 3 + 3) % 3).apply(); }
+            void press() { change(1); }
+        });
+        add(new Number("صوت الدقات", "chimes_volume", 6, 1, 10, "من 10", false));
+        add(new Toggle("إيقافها بالليل (11 م - 6 ص)", "chimes_night_quiet", true));
+        add(new Action("تجربة الدقات", "▶ ربع ساعة / الساعة 3", new Runnable() {
+            int n;
+            public void run() {
+                if (n++ % 2 == 0) AdhanService.chime(SettingsActivity.this, 1, 0);
+                else AdhanService.chime(SettingsActivity.this, 4, 3);
+            }
+        }));
+
         header("شاشة التوقف");
         add(new Number("شكل الساعة", "clock_style", -1, -1, AnalogClockView.STYLES.length - 1, "", false) {
             String value() {
@@ -263,6 +282,7 @@ public class SettingsActivity extends Activity {
     protected void onPause() {
         super.onPause();
         AdhanScheduler.scheduleNext(this);
+        Chimes.scheduleNext(this);
     }
 
     @Override

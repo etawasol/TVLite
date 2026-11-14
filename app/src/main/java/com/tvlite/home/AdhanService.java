@@ -17,6 +17,8 @@ public class AdhanService extends Service {
 
     public static final String EXTRA_PATH = "path";
     private static final String ACTION_STOP = "stop";
+    private static final String ACTION_CHIME = "chime";
+    private volatile boolean chiming;
     private static final int SHORT_SECONDS = 45;
 
     private static volatile boolean playing;
@@ -40,6 +42,16 @@ public class AdhanService extends Service {
         } catch (Exception ignored) { }
     }
 
+    /** Wall-clock chime: quarter melody (1-4) and hour strikes. */
+    public static void chime(Context c, int quarter, int strikes) {
+        Intent i = new Intent(c, AdhanService.class).setAction(ACTION_CHIME)
+                .putExtra("quarter", quarter).putExtra("strikes", strikes).putExtra("title", "دقات الساعة");
+        try {
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i);
+            else c.startService(i);
+        } catch (Exception ignored) { }
+    }
+
     public static void stop(Context c) {
         try {
             c.startService(new Intent(c, AdhanService.class).setAction(ACTION_STOP));
@@ -51,6 +63,20 @@ public class AdhanService extends Service {
         if (Build.VERSION.SDK_INT >= 26) foreground(intent == null ? "" : intent.getStringExtra("title"));
         if (intent == null || ACTION_STOP.equals(intent.getAction())) {
             finish();
+            return START_NOT_STICKY;
+        }
+        if (ACTION_CHIME.equals(intent.getAction())) {
+            if (playing || chiming) return START_NOT_STICKY;
+            chiming = true;
+            final int quarter = intent.getIntExtra("quarter", 4), strikes = intent.getIntExtra("strikes", 0);
+            final float vol = Prefs.get(this).getInt("chimes_volume", 6) / 10f;
+            new Thread(new Runnable() {
+                public void run() {
+                    Chimes.play(quarter, strikes, vol);
+                    chiming = false;
+                    handler.post(new Runnable() { public void run() { if (!playing) finish(); } });
+                }
+            }).start();
             return START_NOT_STICKY;
         }
         release();

@@ -9,6 +9,12 @@ public class AdhanReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context c, Intent intent) {
+        if (Chimes.ACTION.equals(intent.getAction())) {
+            Chimes.onAlarm(c);
+            Chimes.scheduleNext(c);
+            return;
+        }
+        Chimes.scheduleNext(c);
         if (AdhanScheduler.ACTION_ADHAN.equals(intent.getAction())) {
             int prayer = intent.getIntExtra(AdhanScheduler.EXTRA_PRAYER, -1);
             long at = intent.getLongExtra(AdhanScheduler.EXTRA_TIME, 0);

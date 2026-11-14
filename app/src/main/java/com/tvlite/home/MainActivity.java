@@ -94,6 +94,7 @@ public class MainActivity extends Activity {
         lastInput = System.currentTimeMillis();
         loadApps();
         AdhanScheduler.scheduleNext(this);
+        Chimes.scheduleNext(this);
         lastMinute = -1;
         handler.removeCallbacks(tick);
         handler.post(tick);

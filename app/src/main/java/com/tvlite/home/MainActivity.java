@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
     private long nextBgChange;
     private static final long BG_AUTO_EVERY = 15 * 60 * 1000L;
     private static final long DAILY = 24 * 60 * 60 * 1000L;
-    private long nextPacks, nextUpdateCheck;
+    private long nextPacks, nextUpdateCheck, lastUpdateCheck;
     private volatile int newBuild = -1;
 
     private int lastMinute = -1;
@@ -95,6 +95,8 @@ public class MainActivity extends Activity {
         loadApps();
         AdhanScheduler.scheduleNext(this);
         Chimes.scheduleNext(this);
+        // Coming back to the home screen re-checks for updates (at most every 10 minutes).
+        nextUpdateCheck = Math.min(nextUpdateCheck, lastUpdateCheck + 10 * 60 * 1000L);
         lastMinute = -1;
         handler.removeCallbacks(tick);
         handler.post(tick);
@@ -256,7 +258,7 @@ public class MainActivity extends Activity {
             nextBgChange = t + BG_AUTO_EVERY;
         }
         if (t >= nextPacks) { nextPacks = t + DAILY; syncPacks(); }
-        if (t >= nextUpdateCheck) { nextUpdateCheck = t + 6 * 60 * 60 * 1000L; checkUpdate(); }
+        if (t >= nextUpdateCheck) { lastUpdateCheck = t; nextUpdateCheck = t + 60 * 60 * 1000L; checkUpdate(); }
         if (t >= nextMatches) { nextMatches = t + MATCHES_EVERY; fetchMatches(); }
 
         if (resumed && ambient.getVisibility() != View.VISIBLE && prayerOverlay.getVisibility() != View.VISIBLE

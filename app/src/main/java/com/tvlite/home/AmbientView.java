@@ -80,13 +80,19 @@ public class AmbientView extends FrameLayout {
         drift();
     }
 
+    /** Moves the clock to a random spot, after layout so sizes are current, keeping it fully on screen. */
     private void drift() {
-        int w = getWidth(), hgt = getHeight();
-        if (w == 0) return;
-        int rx = Math.max(0, (w - box.getWidth()) / 2 - Ui.dp(getContext(), 20));
-        int ry = Math.max(0, (hgt - box.getHeight()) / 2 - Ui.dp(getContext(), 20));
-        box.setTranslationX(rx == 0 ? 0 : random.nextInt(rx * 2 + 1) - rx);
-        box.setTranslationY(ry == 0 ? 0 : random.nextInt(ry * 2 + 1) - ry);
+        post(new Runnable() {
+            public void run() {
+                int w = getWidth(), hgt = getHeight();
+                if (w == 0 || box.getWidth() == 0) return;
+                int m = Ui.dp(getContext(), 20);
+                int rx = Math.max(0, (w - box.getWidth()) / 2 - m);
+                int ry = Math.max(0, (hgt - box.getHeight()) / 2 - m);
+                box.setTranslationX(rx == 0 ? 0 : random.nextInt(rx * 2 + 1) - rx);
+                box.setTranslationY(ry == 0 ? 0 : random.nextInt(ry * 2 + 1) - ry);
+            }
+        });
     }
 
     /** "العصر 3:12 م · بعد 1:05" */

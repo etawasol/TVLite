@@ -53,8 +53,13 @@ public final class Updater {
     public static void install(Context c, File apk) {
         Intent i;
         if (Build.VERSION.SDK_INT < 24 && apk != null) {
-            i = new Intent(Intent.ACTION_VIEW);
+            // Go straight to the system installer so no "open with" chooser appears.
+            i = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             i.setDataAndType(Uri.fromFile(apk), "application/vnd.android.package-archive");
+            for (String pkg : new String[]{"com.android.packageinstaller", "com.google.android.packageinstaller"}) {
+                Intent t = new Intent(i).setPackage(pkg);
+                if (!c.getPackageManager().queryIntentActivities(t, 0).isEmpty()) { i = t; break; }
+            }
         } else {
             i = new Intent(Intent.ACTION_VIEW, Uri.parse(APK_URL));
         }

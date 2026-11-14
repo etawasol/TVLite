@@ -79,7 +79,7 @@ public class AmbientView extends FrameLayout {
     }
 
     public void update() {
-        Calendar now = Calendar.getInstance();
+        Calendar now = Clock.cal();
         int mod = Fmt.minutesOfDay(now);
         time.setText(Fmt.hm12(mod));
         ampm.setText(Fmt.ampm(mod));

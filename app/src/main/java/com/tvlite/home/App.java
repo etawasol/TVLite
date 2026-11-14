@@ -10,5 +10,6 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
         TimeZone.setDefault(TimeZone.getTimeZone(Config.TIME_ZONE));
+        Clock.init(this);
     }
 }

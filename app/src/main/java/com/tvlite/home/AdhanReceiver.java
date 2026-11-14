@@ -19,7 +19,7 @@ public class AdhanReceiver extends BroadcastReceiver {
             int prayer = intent.getIntExtra(AdhanScheduler.EXTRA_PRAYER, -1);
             long at = intent.getLongExtra(AdhanScheduler.EXTRA_TIME, 0);
             // Skip an adhan that is badly late (device was off), but allow a few minutes of drift.
-            if (prayer >= 0 && Math.abs(System.currentTimeMillis() - at) < 5 * 60 * 1000L) {
+            if (prayer >= 0 && Math.abs(Clock.now() - at) < 5 * 60 * 1000L) {
                 if (intent.getBooleanExtra(AdhanScheduler.EXTRA_IQAMA, false)) {
                     String iq = Audio.iqama(c);
                     if (iq != null) AdhanService.play(c, iq, "الإقامة", false);

@@ -101,6 +101,7 @@ public final class Net {
         c.setRequestProperty("Accept", "application/json");
         try {
             int code = c.getResponseCode();
+            Clock.observe(c.getDate());
             if (code != 200) throw new Exception("HTTP " + code);
             return readAll(c.getInputStream());
         } finally {

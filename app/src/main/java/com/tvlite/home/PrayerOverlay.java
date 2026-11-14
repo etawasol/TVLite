@@ -49,7 +49,7 @@ public class PrayerOverlay extends FrameLayout {
     public void update() {
         Context c = getContext();
         if (!Prefs.prayerScreen(c)) { setVisibility(GONE); return; }
-        Calendar now = Calendar.getInstance();
+        Calendar now = Clock.cal();
         long t = now.getTimeInMillis();
         int[] pt = Prayers.times(c, now);
         for (int i : Prefs.PRAYERS) {

@@ -60,10 +60,11 @@ public class MainActivity extends Activity {
     private static final long BG_AUTO_EVERY = 15 * 60 * 1000L;
     private static final long DAILY = 24 * 60 * 60 * 1000L;
     private long nextPacks, nextUpdateCheck, lastUpdateCheck;
+    private long seenOffset = Clock.offset();
     private volatile int newBuild = -1;
 
     private int lastMinute = -1;
-    private long lastInput = System.currentTimeMillis();
+    private long lastInput = Clock.now();
     private long nextWeather, nextMatches;
     private boolean resumed;
     private volatile String matchesError;
@@ -91,7 +92,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
-        lastInput = System.currentTimeMillis();
+        lastInput = Clock.now();
         loadApps();
         AdhanScheduler.scheduleNext(this);
         Chimes.scheduleNext(this);
@@ -223,7 +224,7 @@ public class MainActivity extends Activity {
     // ---------------------------------------------------------------- clock and prayers
 
     private void onTick() {
-        Calendar now = Calendar.getInstance();
+        Calendar now = Clock.cal();
         int mod = Fmt.minutesOfDay(now);
         clock.setText(Fmt.hm12(mod));
         ampm.setText(Fmt.ampm(mod));
@@ -251,7 +252,16 @@ public class MainActivity extends Activity {
             nextPrayer.setText("الصلاة القادمة: " + AmbientView.nextPrayerText(pt, mod));
         }
 
-        long t = System.currentTimeMillis();
+        long t = Clock.now();
+        if (Clock.offset() != seenOffset) {
+            // The box's clock turned out to be wrong: redraw and refetch for the real date.
+            seenOffset = Clock.offset();
+            lastMinute = -1;
+            nextMatches = 0;
+            nextUpdateCheck = 0;
+            AdhanScheduler.scheduleNext(this);
+            Chimes.scheduleNext(this);
+        }
         if (t >= nextWeather) { nextWeather = t + WEATHER_EVERY; fetchWeather(); }
         if (cache.getBoolean("bg_auto", false) && t >= nextBgChange) {
             if (nextBgChange != 0) nextBackground(false);
@@ -285,7 +295,7 @@ public class MainActivity extends Activity {
                     handler.post(new Runnable() { public void run() { showWeather(json); } });
                 } catch (Exception e) {
                     android.util.Log.w("TVLite", "weather failed", e);
-                    nextWeather = System.currentTimeMillis() + 5 * 60 * 1000L;
+                    nextWeather = Clock.now() + 5 * 60 * 1000L;
                 }
             }
         }).start();
@@ -309,7 +319,7 @@ public class MainActivity extends Activity {
     // ---------------------------------------------------------------- matches
 
     private void fetchMatches() {
-        final Calendar now = Calendar.getInstance();
+        final Calendar now = Clock.cal();
         new Thread(new Runnable() {
             public void run() {
                 Net.init(MainActivity.this);
@@ -333,7 +343,7 @@ public class MainActivity extends Activity {
                 ed.apply();
                 matchesError = any ? null : err;
                 final boolean ok = any;
-                if (!ok) nextMatches = System.currentTimeMillis() + 5 * 60 * 1000L;
+                if (!ok) nextMatches = Clock.now() + 5 * 60 * 1000L;
                 handler.post(new Runnable() { public void run() { showMatches(null, !ok); } });
             }
         }).start();
@@ -368,7 +378,7 @@ public class MainActivity extends Activity {
                 matchesList.addView(why);
             }
         }
-        if (live) nextMatches = Math.min(nextMatches, System.currentTimeMillis() + MATCHES_LIVE_EVERY);
+        if (live) nextMatches = Math.min(nextMatches, Clock.now() + MATCHES_LIVE_EVERY);
         matchesStatus.setText(live ? "مباشر الحين" : (failed ? "بدون اتصال" : ""));
         matchesStatus.setTextColor(live ? Ui.LIVE : Ui.MUTED);
     }
@@ -554,7 +564,7 @@ public class MainActivity extends Activity {
                             String id = firstPic;
                             cache.edit().putString("bg", id).putBoolean("bg_auto", true)
                                     .putBoolean("packs_applied", true).apply();
-                            nextBgChange = System.currentTimeMillis() + BG_AUTO_EVERY;
+                            nextBgChange = Clock.now() + BG_AUTO_EVERY;
                             applyBackground(id);
                         }
                         toast("وصلت " + added.size() + " ملفات جديدة (خلفيات وأصوات أذان)");
@@ -623,7 +633,7 @@ public class MainActivity extends Activity {
     private void toggleAutoBackground() {
         boolean on = !cache.getBoolean("bg_auto", false);
         cache.edit().putBoolean("bg_auto", on).apply();
-        nextBgChange = System.currentTimeMillis() + BG_AUTO_EVERY;
+        nextBgChange = Clock.now() + BG_AUTO_EVERY;
         toast(on ? "تغيير الخلفية تلقائيًا كل 15 دقيقة: شغّال" : "تغيير الخلفية تلقائيًا: موقّف");
     }
 
@@ -679,7 +689,7 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
-        lastInput = System.currentTimeMillis();
+        lastInput = Clock.now();
         if (ambient.getVisibility() == View.VISIBLE) {
             if (e.getAction() == KeyEvent.ACTION_UP) showAmbient(false);
             return true;
@@ -706,7 +716,7 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent e) {
-        lastInput = System.currentTimeMillis();
+        lastInput = Clock.now();
         if (ambient.getVisibility() == View.VISIBLE) {
             if (e.getAction() == MotionEvent.ACTION_UP) showAmbient(false);
             return true;

@@ -21,9 +21,9 @@ public final class AdhanScheduler {
     public static void scheduleNext(Context c) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        long now = System.currentTimeMillis();
+        long now = Clock.now();
         for (int d = 0; d < 3; d++) {
-            Calendar day = Calendar.getInstance();
+            Calendar day = Clock.cal();
             day.add(Calendar.DAY_OF_MONTH, d);
             int[] t = Prayers.times(c, day);
             for (int i : Prefs.PRAYERS) {
@@ -47,8 +47,9 @@ public final class AdhanScheduler {
         return PendingIntent.getBroadcast(c, 1, i, flags);
     }
 
-    private static void set(Context c, AlarmManager am, long at, int prayer, boolean iqama) {
-        PendingIntent pi = pending(c, prayer, at, iqama);
+    private static void set(Context c, AlarmManager am, long real, int prayer, boolean iqama) {
+        PendingIntent pi = pending(c, prayer, real, iqama);
+        long at = Clock.toSystem(real);
         try {
             if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);

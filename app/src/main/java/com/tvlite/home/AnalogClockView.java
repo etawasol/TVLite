@@ -38,7 +38,7 @@ public class AnalogClockView extends View {
     protected void onDraw(Canvas c) {
         float w = getWidth(), h = getHeight();
         float cx = w / 2f, cy = h / 2f, r = Math.min(w, h) / 2f * 0.94f;
-        Calendar now = Calendar.getInstance();
+        Calendar now = Clock.cal();
         float sec = now.get(Calendar.SECOND) + now.get(Calendar.MILLISECOND) / 1000f;
         float min = now.get(Calendar.MINUTE) + sec / 60f;
         float hr = now.get(Calendar.HOUR) + min / 60f;

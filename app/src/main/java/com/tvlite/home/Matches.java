@@ -156,8 +156,8 @@ public final class Matches {
 
     /** "اليوم 8:00 م", "بكرة 9:30 م", "السبت 21/11 8:00 م" */
     public static String when(long t) {
-        Calendar now = Calendar.getInstance();
-        Calendar c = Calendar.getInstance();
+        Calendar now = Clock.cal();
+        Calendar c = Clock.cal();
         c.setTimeInMillis(t);
         String time = Fmt.time(Fmt.minutesOfDay(c));
         int dayDiff = dayIndex(c) - dayIndex(now);

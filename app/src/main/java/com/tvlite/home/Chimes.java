@@ -47,13 +47,13 @@ public final class Chimes {
         PendingIntent pi = pending(c);
         int mode = mode(c);
         if (mode == OFF) { am.cancel(pi); return; }
-        Calendar t = Calendar.getInstance();
+        Calendar t = Clock.cal();
         t.set(Calendar.SECOND, 0);
         t.set(Calendar.MILLISECOND, 0);
         int step = mode == QUARTERS ? 15 : 60;
         int m = t.get(Calendar.MINUTE);
         t.add(Calendar.MINUTE, step - (m % step));
-        long at = t.getTimeInMillis();
+        long at = Clock.toSystem(t.getTimeInMillis());
         try {
             if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
             else if (Build.VERSION.SDK_INT >= 23) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
@@ -74,7 +74,7 @@ public final class Chimes {
     public static void onAlarm(Context c) {
         // Round to the nearest quarter hour (alarms can fire a little early or late).
         long q = 15 * 60 * 1000L;
-        Calendar t = Calendar.getInstance();
+        Calendar t = Clock.cal();
         long local = t.getTimeInMillis() + t.get(Calendar.ZONE_OFFSET) + t.get(Calendar.DST_OFFSET);
         t.setTimeInMillis(t.getTimeInMillis() + (Math.round((double) local / q) * q - local));
         int quarter = t.get(Calendar.MINUTE) / 15;

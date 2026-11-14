@@ -25,5 +25,6 @@ public final class Prefs {
     public static boolean prayerScreen(Context c) { return get(c).getBoolean("prayer_screen", true); }
     public static boolean bringToFront(Context c) { return get(c).getBoolean("bring_front", false); }
     public static boolean iqamaSound(Context c) { return get(c).getBoolean("iqama_sound", true); }
-    public static boolean shortAdhan(Context c) { return get(c).getBoolean("adhan_short", false); }
+    /** Short adhan (opening, then fade out) for this prayer. */
+    public static boolean shortAdhan(Context c, int i) { return get(c).getBoolean("short_" + i, false); }
 }

@@ -16,7 +16,7 @@ public class AdhanReceiver extends BroadcastReceiver {
             if (prayer >= 0 && Math.abs(System.currentTimeMillis() - at) < 5 * 60 * 1000L) {
                 if (intent.getBooleanExtra(AdhanScheduler.EXTRA_IQAMA, false)) {
                     String iq = Audio.iqama(c);
-                    if (iq != null) AdhanService.play(c, iq, "الإقامة");
+                    if (iq != null) AdhanService.play(c, iq, "الإقامة", false);
                 } else {
                     AdhanService.start(c, prayer);
                 }

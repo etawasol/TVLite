@@ -28,11 +28,12 @@ public class AdhanService extends Service {
     public static void start(Context c, int prayer) {
         String path = Audio.forPrayer(c, prayer);
         if (path == null) return;
-        play(c, path, PrayerTimes.NAMES[prayer]);
+        play(c, path, PrayerTimes.NAMES[prayer], Prefs.shortAdhan(c, prayer));
     }
 
-    public static void play(Context c, String path, String title) {
-        Intent i = new Intent(c, AdhanService.class).putExtra(EXTRA_PATH, path).putExtra("title", title);
+    public static void play(Context c, String path, String title, boolean shortVersion) {
+        Intent i = new Intent(c, AdhanService.class).putExtra(EXTRA_PATH, path).putExtra("title", title)
+                .putExtra("short", shortVersion);
         try {
             if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i);
             else c.startService(i);
@@ -69,7 +70,7 @@ public class AdhanService extends Service {
             player.prepare();
             player.start();
             playing = true;
-            if (Prefs.shortAdhan(this) && !"الإقامة".equals(intent.getStringExtra("title"))) fadeOutAfter(SHORT_SECONDS * 1000L, vol);
+            if (intent.getBooleanExtra("short", false)) fadeOutAfter(SHORT_SECONDS * 1000L, vol);
         } catch (Exception e) {
             android.util.Log.w("TVLite", "adhan failed: " + path, e);
             finish();

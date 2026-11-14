@@ -115,7 +115,6 @@ public class SettingsActivity extends Activity {
         header("الأذان");
         add(new Choice("المؤذن", "muezzin", "تلقائي (أول تسجيل)"));
         add(new Choice("أذان الفجر", "muezzin_fajr", "نفس المؤذن"));
-        add(new Toggle("أذان مختصر (أول 45 ثانية)", "adhan_short", false));
         add(new Number("مستوى الصوت", "volume", 8, 1, 10, "من 10", false));
         add(new Action("تجربة الأذان", "▶ تشغيل / إيقاف", new Runnable() {
             public void run() { preview(2); }
@@ -124,6 +123,12 @@ public class SettingsActivity extends Activity {
             public void run() { preview(0); }
         }));
         for (int i : Prefs.PRAYERS) add(new Toggle("أذان " + PrayerTimes.NAMES[i], "adhan_on_" + i, true));
+        header("طول الأذان: كامل أو مختصر (أول 45 ثانية ثم يخفت)");
+        for (int i : Prefs.PRAYERS) {
+            add(new Toggle("أذان " + PrayerTimes.NAMES[i], "short_" + i, false) {
+                String value() { return prefs.getBoolean(key, def) ? "مختصر" : "كامل"; }
+            });
+        }
 
         header("الإقامة: كم دقيقة بعد الأذان");
         add(new Toggle("صوت الإقامة", "iqama_sound", true));
@@ -204,7 +209,7 @@ public class SettingsActivity extends Activity {
             return;
         }
         previewed = true;
-        AdhanService.play(this, path, PrayerTimes.NAMES[prayer]);
+        AdhanService.play(this, path, PrayerTimes.NAMES[prayer], Prefs.shortAdhan(this, prayer));
     }
 
     @Override

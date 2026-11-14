@@ -35,7 +35,8 @@ public final class Matches {
             {"riyadh", "الرياض"}, {"kholood", "الخلود"}, {"okhdood", "الأخدود"}, {"akhdoud", "الأخدود"},
             {"wehda", "الوحدة"}, {"orobah", "العروبة"}, {"najma", "النجمة"}, {"hazem", "الحزم"},
             {"neom", "نيوم"}, {"feiha", "الفيحاء"}, {"abha", "أبها"}, {"diriyah", "الدرعية"},
-            {"faisaly", "الفيصلي"}, {"jabalain", "العين"}, {"batin", "الباطن"},
+            {"faisaly", "الفيصلي"}, {"jabalain", "الجبلين"}, {"al ain", "العين"}, {"shamal", "الشمال"},
+            {"neftchi", "نفتشي"}, {"sharjah", "الشارقة"}, {"sadd", "السد"}, {"duhail", "الدحيل"}, {"batin", "الباطن"},
     };
     private static final int FAVOURITES = 6;
 

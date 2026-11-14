@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
     private long lastInput = System.currentTimeMillis();
     private long nextWeather, nextMatches;
     private boolean resumed;
+    private volatile String matchesError;
 
     private final Runnable tick = new Runnable() {
         public void run() {
@@ -246,12 +247,14 @@ public class MainActivity extends Activity {
     private void fetchWeather() {
         new Thread(new Runnable() {
             public void run() {
+                Net.init(MainActivity.this);
                 try {
                     final String json = Net.get(Weather.url(Config.LAT, Config.LNG));
                     Weather.parse(json);
                     cache.edit().putString("weather", json).apply();
                     handler.post(new Runnable() { public void run() { showWeather(json); } });
                 } catch (Exception e) {
+                    android.util.Log.w("TVLite", "weather failed", e);
                     nextWeather = System.currentTimeMillis() + 5 * 60 * 1000L;
                 }
             }
@@ -279,14 +282,26 @@ public class MainActivity extends Activity {
         final Calendar now = Calendar.getInstance();
         new Thread(new Runnable() {
             public void run() {
+                Net.init(MainActivity.this);
                 boolean any = false;
+                String err = null;
+                SharedPreferences.Editor ed = cache.edit();
                 for (String[] l : Matches.LEAGUES) {
-                    try {
-                        String json = Net.get(Matches.url(l[0], now));
-                        cache.edit().putString("m_" + l[0], json).apply();
-                        any = true;
-                    } catch (Exception ignored) { }
+                    List<String> urls = Matches.urls(l[0], now);
+                    for (int k = 0; k < 3; k++) {
+                        String key = "m_" + l[0] + "_" + k;
+                        if (k >= urls.size()) { ed.remove(key); continue; }
+                        try {
+                            ed.putString(key, Net.get(urls.get(k)));
+                            any = true;
+                        } catch (Exception e) {
+                            android.util.Log.w("TVLite", "matches " + urls.get(k) + " failed", e);
+                            if (err == null) err = Net.reason(e);
+                        }
+                    }
                 }
+                ed.apply();
+                matchesError = any ? null : err;
                 final boolean ok = any;
                 if (!ok) nextMatches = System.currentTimeMillis() + 5 * 60 * 1000L;
                 handler.post(new Runnable() { public void run() { showMatches(null, !ok); } });
@@ -297,9 +312,11 @@ public class MainActivity extends Activity {
     private void showMatches(String unused, boolean failed) {
         List<Matches.Match> all = new ArrayList<Matches.Match>();
         for (String[] l : Matches.LEAGUES) {
-            String json = cache.getString("m_" + l[0], null);
-            if (json == null) continue;
-            try { Matches.parse(json, l[1], all); } catch (Exception ignored) { }
+            for (int k = 0; k < 3; k++) {
+                String json = cache.getString("m_" + l[0] + "_" + k, null);
+                if (json == null) continue;
+                try { Matches.parse(json, l[1], all); } catch (Exception ignored) { }
+            }
         }
         List<Matches.Match> list = Matches.arrange(all, 5);
         matchesList.removeAllViews();
@@ -313,6 +330,13 @@ public class MainActivity extends Activity {
             t.setText(failed ? "ما قدرت أجيب المباريات، بحاول مرة ثانية بعد شوي" : "جاري تحميل المباريات…");
             t.setPadding(0, Ui.dp(this, 8), 0, 0);
             matchesList.addView(t);
+            if (failed && matchesError != null) {
+                TextView why = Ui.text(this, 12, Ui.MUTED, false);
+                why.setText(matchesError);
+                why.setTextDirection(View.TEXT_DIRECTION_LTR);
+                why.setPadding(0, Ui.dp(this, 4), 0, 0);
+                matchesList.addView(why);
+            }
         }
         if (live) nextMatches = Math.min(nextMatches, System.currentTimeMillis() + MATCHES_LIVE_EVERY);
         matchesStatus.setText(live ? "مباشر الحين" : (failed ? "بدون اتصال" : ""));

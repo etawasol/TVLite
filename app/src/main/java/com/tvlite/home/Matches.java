@@ -34,7 +34,8 @@ public final class Matches {
             {"raed", "الرائد"}, {"khaleej", "الخليج"}, {"fayha", "الفيحاء"}, {"damac", "ضمك"},
             {"riyadh", "الرياض"}, {"kholood", "الخلود"}, {"okhdood", "الأخدود"}, {"akhdoud", "الأخدود"},
             {"wehda", "الوحدة"}, {"orobah", "العروبة"}, {"najma", "النجمة"}, {"hazem", "الحزم"},
-            {"neom", "نيوم"}, {"feiha", "الفيحاء"},
+            {"neom", "نيوم"}, {"feiha", "الفيحاء"}, {"abha", "أبها"}, {"diriyah", "الدرعية"},
+            {"faisaly", "الفيصلي"}, {"jabalain", "العين"}, {"batin", "الباطن"},
     };
     private static final int FAVOURITES = 6;
 
@@ -50,17 +51,28 @@ public final class Matches {
         public long time;
     }
 
-    public static String url(String slug, Calendar now) {
-        Calendar from = (Calendar) now.clone();
-        from.add(Calendar.DAY_OF_MONTH, -3);
-        Calendar to = (Calendar) now.clone();
-        to.add(Calendar.DAY_OF_MONTH, 30);
-        return "https://site.api.espn.com/apis/site/v2/sports/soccer/" + slug
-                + "/scoreboard?limit=300&dates=" + ymd(from) + "-" + ymd(to);
+    /**
+     * ESPN rejects date ranges, so ask month by month (dates=YYYYMM):
+     * last month only in the first days of a month (for recent results), this month and next month.
+     */
+    public static List<String> urls(String slug, Calendar now) {
+        List<String> r = new ArrayList<String>();
+        Calendar c = (Calendar) now.clone();
+        c.set(Calendar.DAY_OF_MONTH, 1);
+        if (now.get(Calendar.DAY_OF_MONTH) <= 4) {
+            Calendar prev = (Calendar) c.clone();
+            prev.add(Calendar.MONTH, -1);
+            r.add(month(slug, prev));
+        }
+        r.add(month(slug, c));
+        c.add(Calendar.MONTH, 1);
+        r.add(month(slug, c));
+        return r;
     }
 
-    private static String ymd(Calendar c) {
-        return c.get(Calendar.YEAR) + Fmt.two(c.get(Calendar.MONTH) + 1) + Fmt.two(c.get(Calendar.DAY_OF_MONTH));
+    private static String month(String slug, Calendar c) {
+        return "https://site.api.espn.com/apis/site/v2/sports/soccer/" + slug
+                + "/scoreboard?limit=200&dates=" + c.get(Calendar.YEAR) + Fmt.two(c.get(Calendar.MONTH) + 1);
     }
 
     public static void parse(String json, String leagueName, List<Match> out) throws Exception {

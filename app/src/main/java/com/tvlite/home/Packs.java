@@ -28,6 +28,35 @@ public final class Packs {
         if (p.getString(key, "").length() == 0) p.edit().putString(key, f.getAbsolutePath()).apply();
     }
 
+    /** Adhan recordings shipped inside the APK (assets/adhan) -> label. */
+    private static final String[][] BUNDLED = {
+            {"adhan_egypt_abdulbasit.mp3", "مصر - عبدالباسط عبدالصمد"},
+            {"adhan_cairo_shaisha.mp3", "القاهرة - أبو العينين شعيشع"},
+    };
+
+    /** Copies the recordings bundled in the APK next to the downloaded ones (once). */
+    private static void bundled(Context c, File audioDir, android.content.SharedPreferences labels, List<File> added) {
+        for (String[] b : BUNDLED) {
+            labels.edit().putString(b[0], b[1]).apply();
+            File f = new File(audioDir, b[0]);
+            if (f.exists() && f.length() > 0) continue;
+            File tmp = new File(audioDir, b[0] + ".part");
+            try {
+                java.io.InputStream in = c.getAssets().open("adhan/" + b[0]);
+                java.io.FileOutputStream out = new java.io.FileOutputStream(tmp);
+                byte[] buf = new byte[16384];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                out.close();
+                in.close();
+                if (tmp.renameTo(f)) added.add(f);
+            } catch (Exception ignored) {
+            } finally {
+                tmp.delete();
+            }
+        }
+    }
+
     /** Downloads any missing pictures and adhan recordings. Returns the files that were newly added. */
     public static List<File> sync(Context c) {
         List<File> added = new ArrayList<File>();
@@ -42,6 +71,7 @@ public final class Packs {
         android.content.SharedPreferences labels = c.getSharedPreferences("labels", Context.MODE_PRIVATE);
         File audioDir = Audio.privateFolder(c);
         audioDir.mkdirs();
+        bundled(c, audioDir, labels, added);
         try {
             JSONArray packs = new JSONObject(json).getJSONArray("packs");
             for (int p = 0; p < packs.length(); p++) {

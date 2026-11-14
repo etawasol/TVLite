@@ -22,3 +22,7 @@ Downloaded by the app at runtime; not stored in this repository. archive.org ite
 - `adhan_azan.mp3` (أذان تقليدي): https://commons.wikimedia.org/wiki/File:Azan.ogg, CC BY-SA 4.0, Andrewler
 - `adhan_short.mp3` (أذان قصير (42 ثانية)): https://commons.wikimedia.org/wiki/File:Adhan.ogg, CC0, Aishatu98
 - `iqamah.mp3` (الإقامة): https://commons.wikimedia.org/wiki/File:Iqamah.ogg, CC0, Aishatu98
+
+## Adhan bundled in the app (assets/adhan)
+- adhan_egypt_abdulbasit.mp3: أذان مصر، عبدالباسط عبدالصمد (file supplied by the owner, tagged assabile.com)
+- adhan_cairo_shaisha.mp3: أذان القاهرة، أبو العينين شعيشع (file supplied by the owner, tagged assabile.com)

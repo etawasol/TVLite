@@ -58,7 +58,13 @@ public final class Packs {
                     if (f.exists() && f.length() > 0) continue;
                     try {
                         if (!added.isEmpty()) Thread.sleep(4000); // be gentle with Wikimedia (429 otherwise)
-                        Net.download(it.getString("url"), f);
+                        try {
+                            Net.download(it.getString("url"), f);
+                        } catch (Exception busy) {
+                            if (!String.valueOf(busy.getMessage()).contains("429")) throw busy;
+                            Thread.sleep(30000); // rate limited: wait and try once more
+                            Net.download(it.getString("url"), f);
+                        }
                         added.add(f);
                         if (audio) defaultMuezzin(c, f, it.optBoolean("fajr", false));
                     } catch (Exception e) {

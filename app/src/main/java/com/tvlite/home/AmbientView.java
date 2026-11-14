@@ -16,6 +16,8 @@ public class AmbientView extends FrameLayout {
 
     private final LinearLayout box;
     private final TextView time, ampm, date, hijri, next;
+    private final LinearLayout digital;
+    private final AnalogClockView analog;
     private final Random random = new Random();
     private int lastMinute = -1;
 
@@ -35,11 +37,30 @@ public class AmbientView extends FrameLayout {
         hijri = Ui.text(c, 22, 0xFFC9A64B, false);
         next = Ui.text(c, 22, 0xFF7FC8A9, false);
         next.setPadding(0, Ui.dp(c, 14), 0, 0);
+        digital = tr;
+        analog = new AnalogClockView(c);
+        int size = Ui.dp(c, 250);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(size, size);
+        alp.bottomMargin = Ui.dp(c, 14);
+        box.addView(analog, alp);
         box.addView(tr);
         box.addView(date);
         box.addView(hijri);
         box.addView(next);
         addView(box, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        applyPrefs();
+    }
+
+    /** Digital (-1) or one of the analog styles, from the prayer/screen settings. */
+    public void applyPrefs() {
+        int style = Prefs.clockStyle(getContext());
+        boolean isAnalog = style >= 0;
+        analog.setVisibility(isAnalog ? VISIBLE : GONE);
+        digital.setVisibility(isAnalog ? GONE : VISIBLE);
+        if (isAnalog) {
+            analog.setStyle(style);
+            analog.setSeconds(Prefs.clockSeconds(getContext()));
+        }
     }
 
     public void update() {
@@ -47,7 +68,9 @@ public class AmbientView extends FrameLayout {
         int mod = Fmt.minutesOfDay(now);
         time.setText(Fmt.hm12(mod));
         ampm.setText(Fmt.ampm(mod));
+        if (analog.getVisibility() == VISIBLE) analog.invalidate();
         if (mod == lastMinute) return;
+        applyPrefs();
         lastMinute = mod;
         int[] h = Prayers.hijri(getContext(), now);
         date.setText(Fmt.gregorian(now));

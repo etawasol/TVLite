@@ -24,6 +24,30 @@ public class SettingsActivity extends Activity {
     private LinearLayout list;
     private final List<Row> rows = new ArrayList<Row>();
     private boolean previewed;
+    private AmbientView preview;
+    private final android.os.Handler handler = new android.os.Handler();
+    private final Runnable previewTick = new Runnable() {
+        public void run() {
+            if (preview.getVisibility() != View.VISIBLE) return;
+            preview.update();
+            handler.postDelayed(this, 1000);
+        }
+    };
+
+    private void showPreview() {
+        preview.applyPrefs();
+        preview.setVisibility(View.VISIBLE);
+        handler.post(previewTick);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        if (preview != null && preview.getVisibility() == View.VISIBLE) {
+            if (e.getAction() == KeyEvent.ACTION_UP) preview.setVisibility(View.GONE);
+            return true;
+        }
+        return super.dispatchKeyEvent(e);
+    }
 
     private abstract class Row {
         final String title;
@@ -102,7 +126,12 @@ public class SettingsActivity extends Activity {
         int p = Ui.dp(this, 28);
         list.setPadding(p, Ui.dp(this, 20), p, Ui.dp(this, 40));
         scroll.addView(list);
-        setContentView(scroll);
+        android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+        root.addView(scroll);
+        preview = new AmbientView(this);
+        preview.setVisibility(View.GONE);
+        root.addView(preview);
+        setContentView(root);
 
         TextView title = Ui.text(this, 26, Ui.TEXT, true);
         title.setText("إعدادات الصلاة");
@@ -137,6 +166,24 @@ public class SettingsActivity extends Activity {
 
         header("تعديل الأوقات بالدقائق");
         for (int i = 0; i < 6; i++) add(new Number(PrayerTimes.NAMES[i], "adj_" + i, 0, -30, 30, "دقيقة", true));
+
+        header("شاشة التوقف");
+        add(new Number("شكل الساعة", "clock_style", -1, -1, AnalogClockView.STYLES.length - 1, "", false) {
+            String value() {
+                int v = prefs.getInt(key, def);
+                return v < 0 ? "رقمية" : "عقارب: " + AnalogClockView.STYLES[v];
+            }
+            void change(int dir) {
+                int n = AnalogClockView.STYLES.length + 1;
+                int v = ((prefs.getInt(key, def) + 1 + dir) % n + n) % n - 1;
+                prefs.edit().putInt(key, v).apply();
+            }
+            void press() { change(1); }
+        });
+        add(new Toggle("عقرب الثواني", "clock_seconds", true));
+        add(new Action("معاينة شاشة التوقف", "▶ عرض", new Runnable() {
+            public void run() { showPreview(); }
+        }));
 
         header("الشاشة");
         add(new Toggle("شاشة الأذان وعدّاد الإقامة", "prayer_screen", true));

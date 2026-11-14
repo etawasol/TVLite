@@ -266,7 +266,7 @@ public class MainActivity extends Activity {
 
     private void showAmbient(boolean on) {
         ambient.setVisibility(on ? View.VISIBLE : View.GONE);
-        if (on) ambient.update();
+        if (on) { ambient.applyPrefs(); ambient.update(); }
     }
 
     // ---------------------------------------------------------------- weather

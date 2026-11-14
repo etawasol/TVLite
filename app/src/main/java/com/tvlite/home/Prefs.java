@@ -24,6 +24,8 @@ public final class Prefs {
     public static int hijriOffset(Context c) { return get(c).getInt("hijri_offset", 0); }
     public static boolean prayerScreen(Context c) { return get(c).getBoolean("prayer_screen", true); }
     public static boolean bringToFront(Context c) { return get(c).getBoolean("bring_front", false); }
+    public static int clockStyle(Context c) { return get(c).getInt("clock_style", -1); }
+    public static boolean clockSeconds(Context c) { return get(c).getBoolean("clock_seconds", true); }
     public static boolean iqamaSound(Context c) { return get(c).getBoolean("iqama_sound", true); }
     /** Short adhan (opening, then fade out) for this prayer. */
     public static boolean shortAdhan(Context c, int i) { return get(c).getBoolean("short_" + i, false); }

@@ -49,10 +49,10 @@ public class AmbientView extends FrameLayout {
         ampm.setText(Fmt.ampm(mod));
         if (mod == lastMinute) return;
         lastMinute = mod;
-        int[] h = Hijri.of(now, 0);
+        int[] h = Prayers.hijri(getContext(), now);
         date.setText(Fmt.gregorian(now));
         hijri.setText(Hijri.format(h));
-        int[] pt = PrayerTimes.compute(now, Config.LAT, Config.LNG, Config.TZ, h[1] == 9);
+        int[] pt = Prayers.times(getContext(), now);
         next.setText(nextPrayerText(pt, mod));
         drift();
     }

@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
     private LinearLayout matchesList, appsRow;
     private TextView matchesStatus;
     private AmbientView ambient;
+    private PrayerOverlay prayerOverlay;
     private FrameLayout root;
     private ImageView bgImage;
     private View bgScrim;
@@ -92,6 +93,7 @@ public class MainActivity extends Activity {
         resumed = true;
         lastInput = System.currentTimeMillis();
         loadApps();
+        AdhanScheduler.scheduleNext(this);
         lastMinute = -1;
         handler.removeCallbacks(tick);
         handler.post(tick);
@@ -207,6 +209,8 @@ public class MainActivity extends Activity {
         hs.addView(appsRow);
         main.addView(hs, Ui.lp(-1, -2, 0));
 
+        prayerOverlay = new PrayerOverlay(c);
+        root.addView(prayerOverlay, new FrameLayout.LayoutParams(-1, -1));
         ambient = new AmbientView(c);
         ambient.setVisibility(View.GONE);
         root.addView(ambient, new FrameLayout.LayoutParams(-1, -1));
@@ -221,15 +225,18 @@ public class MainActivity extends Activity {
         clock.setText(Fmt.hm12(mod));
         ampm.setText(Fmt.ampm(mod));
         if (ambient.getVisibility() == View.VISIBLE) ambient.update();
+        prayerOverlay.update();
+        if (prayerOverlay.getVisibility() == View.VISIBLE && ambient.getVisibility() == View.VISIBLE) showAmbient(false);
 
         if (mod != lastMinute) {
             lastMinute = mod;
-            int[] h = Hijri.of(now, 0);
+            int[] h = Prayers.hijri(this, now);
             date.setText(Fmt.gregorian(now));
             hijri.setText(Hijri.format(h));
-            int[] pt = PrayerTimes.compute(now, Config.LAT, Config.LNG, Config.TZ, h[1] == 9);
+            int[] pt = Prayers.times(this, now);
             int next = -1;
             for (int i = 0; i < 6; i++) {
+                prayerName[i].setText(Prayers.name(now, i));
                 prayerTime[i].setText(Fmt.time(pt[i]));
                 if (next < 0 && i != 1 && pt[i] > mod) next = i;
             }
@@ -251,7 +258,7 @@ public class MainActivity extends Activity {
         if (t >= nextUpdateCheck) { nextUpdateCheck = t + 6 * 60 * 60 * 1000L; checkUpdate(); }
         if (t >= nextMatches) { nextMatches = t + MATCHES_EVERY; fetchMatches(); }
 
-        if (resumed && ambient.getVisibility() != View.VISIBLE
+        if (resumed && ambient.getVisibility() != View.VISIBLE && prayerOverlay.getVisibility() != View.VISIBLE
                 && t - lastInput > Config.IDLE_MINUTES * 60 * 1000L) {
             showAmbient(true);
         }
@@ -443,6 +450,9 @@ public class MainActivity extends Activity {
         appsRow.addView(tile("⚙", "الإعدادات", settingsIcon, "#settings", new Runnable() {
             public void run() { launch(new Intent(Settings.ACTION_SETTINGS)); }
         }));
+        appsRow.addView(tile("۞", "إعدادات الصلاة", null, "#prayer", new Runnable() {
+            public void run() { startActivity(new Intent(MainActivity.this, SettingsActivity.class)); }
+        }));
         appsRow.addView(tile("☾", "شاشة التوقف", null, "#ambient", new Runnable() {
             public void run() { showAmbient(true); }
         }));
@@ -532,15 +542,20 @@ public class MainActivity extends Activity {
                 handler.post(new Runnable() {
                     public void run() {
                         // First pictures ever: show the first one and rotate through them.
-                        if (!cache.getBoolean("packs_applied", false)
+                        String firstPic = null;
+                        for (java.io.File f : added) {
+                            if (f.getParentFile() != null && f.getParentFile().equals(Backgrounds.privateFolder(MainActivity.this))) { firstPic = f.getAbsolutePath(); break; }
+                        }
+                        if (firstPic != null && !cache.getBoolean("packs_applied", false)
                                 && Backgrounds.isGradient(cache.getString("bg", "g:0"))) {
-                            String id = added.get(0).getAbsolutePath();
+                            String id = firstPic;
                             cache.edit().putString("bg", id).putBoolean("bg_auto", true)
                                     .putBoolean("packs_applied", true).apply();
                             nextBgChange = System.currentTimeMillis() + BG_AUTO_EVERY;
                             applyBackground(id);
                         }
-                        toast("وصلت " + added.size() + " خلفيات جديدة");
+                        toast("وصلت " + added.size() + " ملفات جديدة (خلفيات وأصوات أذان)");
+                        AdhanScheduler.scheduleNext(MainActivity.this);
                     }
                 });
             }
@@ -667,7 +682,20 @@ public class MainActivity extends Activity {
             return true;
         }
         if (e.getAction() == KeyEvent.ACTION_UP && e.getKeyCode() == KeyEvent.KEYCODE_MENU) {
-            launch(new Intent(Settings.ACTION_SETTINGS));
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
+        if (prayerOverlay.getVisibility() == View.VISIBLE) {
+            // BACK closes the prayer screen and stops the adhan; other keys are ignored meanwhile.
+            if (e.getKeyCode() == KeyEvent.KEYCODE_BACK && e.getAction() == KeyEvent.ACTION_UP) {
+                prayerOverlay.dismiss();
+                AdhanService.stop(this);
+            }
+            return true;
+        }
+        if (e.getKeyCode() == KeyEvent.KEYCODE_BACK && e.getAction() == KeyEvent.ACTION_UP
+                && AdhanService.isPlaying()) {
+            AdhanService.stop(this);
             return true;
         }
         return super.dispatchKeyEvent(e);

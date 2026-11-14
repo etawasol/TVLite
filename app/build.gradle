@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.tvlite.home'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.tvlite.home'
+        minSdk 21
+        targetSdk 34
+        versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+        versionName "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '0'}"
+    }
+
+    signingConfigs {
+        // A fixed key committed to the repo so every build can update the previous one on the device.
+        shared {
+            storeFile file('tvlite.keystore')
+            storePassword 'tvlite123'
+            keyAlias 'tvlite'
+            keyPassword 'tvlite123'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.shared
+        }
+        debug {
+            signingConfig signingConfigs.shared
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+}

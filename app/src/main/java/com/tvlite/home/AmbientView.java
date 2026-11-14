@@ -16,7 +16,7 @@ public class AmbientView extends FrameLayout {
 
     private final LinearLayout box;
     private final TextView time, ampm, date, hijri, next;
-    private final LinearLayout digital;
+    private final LinearLayout digital, info;
     private final AnalogClockView analog;
     private final Random random = new Random();
     private int lastMinute = -1;
@@ -39,25 +39,40 @@ public class AmbientView extends FrameLayout {
         next.setPadding(0, Ui.dp(c, 14), 0, 0);
         digital = tr;
         analog = new AnalogClockView(c);
-        int size = Ui.dp(c, 250);
-        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(size, size);
-        alp.bottomMargin = Ui.dp(c, 14);
-        box.addView(analog, alp);
-        box.addView(tr);
-        box.addView(date);
-        box.addView(hijri);
-        box.addView(next);
+        info = Ui.column(c);
+        info.setGravity(Gravity.CENTER_HORIZONTAL);
+        info.addView(tr);
+        info.addView(date);
+        info.addView(hijri);
+        info.addView(next);
+        box.addView(analog, new LinearLayout.LayoutParams(1, 1));
+        box.addView(info);
         addView(box, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER));
         applyPrefs();
     }
 
-    /** Digital (-1) or one of the analog styles, from the prayer/screen settings. */
+    /**
+     * Digital (-1) or one of the analog styles, from the settings.
+     * The analog clock fills 80% of the screen height, with the dates and next prayer beside it.
+     */
     public void applyPrefs() {
         int style = Prefs.clockStyle(getContext());
         boolean isAnalog = style >= 0;
         analog.setVisibility(isAnalog ? VISIBLE : GONE);
         digital.setVisibility(isAnalog ? GONE : VISIBLE);
+        box.setOrientation(isAnalog ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        box.setGravity(isAnalog ? Gravity.CENTER_VERTICAL : Gravity.CENTER_HORIZONTAL);
         if (isAnalog) {
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int size = (int) (Math.min(dm.widthPixels, dm.heightPixels) * 0.8f);
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) analog.getLayoutParams();
+            if (lp.width != size) {
+                lp.width = size;
+                lp.height = size;
+                lp.setMargins(0, 0, 0, 0);
+                lp.setMarginEnd(Ui.dp(getContext(), 36));
+                analog.setLayoutParams(lp);
+            }
             analog.setStyle(style);
             analog.setSeconds(Prefs.clockSeconds(getContext()));
         }

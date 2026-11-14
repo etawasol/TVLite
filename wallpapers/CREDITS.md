@@ -13,7 +13,7 @@ The app downloads these pictures from Wikimedia Commons. They are not stored in 
 
 Downloaded by the app at runtime; not stored in this repository. archive.org items carry only the uploader's licence claim.
 
-- `adhan_cairo_long.mp3` (القاهرة - عبدالناصر حركة): https://archive.org/details/adhan-from-egypt-abdulnasser-harak, Public Domain Mark (uploader's claim)
+- `adhan_cairo_long.mp3` (القاهرة - عبدالناصر حرك): https://archive.org/details/adhan-from-egypt-abdulnasser-harak, Public Domain Mark (uploader's claim)
 - `adhan_fajr_fouad.mp3` (أذان الفجر - فؤاد): https://archive.org/details/AdanAlfajrFouadAdan, Public Domain Mark (uploader's claim)
 - `adhan_madinah.mp3` (المسجد النبوي): https://commons.wikimedia.org/wiki/File:33937_ejaz215_call-to-prayer-from-the-prophet-s-mo.ogg, CC BY 3.0, ejaz215
 - `adhan_makkah.mp3` (مكة المكرمة): https://archive.org/details/MakkahAzan-ramadan, CC0 (uploader's claim)

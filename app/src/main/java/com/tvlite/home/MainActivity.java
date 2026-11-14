@@ -7,7 +7,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -53,6 +52,11 @@ public class MainActivity extends Activity {
     private LinearLayout matchesList, appsRow;
     private TextView matchesStatus;
     private AmbientView ambient;
+    private FrameLayout root;
+    private ImageView bgImage;
+    private View bgScrim;
+    private long nextBgChange;
+    private static final long BG_AUTO_EVERY = 15 * 60 * 1000L;
 
     private int lastMinute = -1;
     private long lastInput = System.currentTimeMillis();
@@ -74,6 +78,7 @@ public class MainActivity extends Activity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         cache = getSharedPreferences("cache", MODE_PRIVATE);
         setContentView(build());
+        applyBackground(cache.getString("bg", "g:0"));
         showWeather(cache.getString("weather", null));
         showMatches(null, false);
     }
@@ -100,11 +105,17 @@ public class MainActivity extends Activity {
 
     private View build() {
         Context c = this;
-        FrameLayout root = new FrameLayout(c);
+        root = new FrameLayout(c);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF0E2A47, 0xFF0A1A30, 0xFF050C18});
-        root.setBackgroundDrawable(bg);
+        root.setBackgroundDrawable(Backgrounds.gradient("g:0"));
+        bgImage = new ImageView(c);
+        bgImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        bgImage.setVisibility(View.GONE);
+        root.addView(bgImage, new FrameLayout.LayoutParams(-1, -1));
+        bgScrim = new View(c);
+        bgScrim.setBackgroundColor(0x88000000);
+        bgScrim.setVisibility(View.GONE);
+        root.addView(bgScrim, new FrameLayout.LayoutParams(-1, -1));
 
         LinearLayout main = Ui.column(c);
         int pad = Ui.dp(c, 22);
@@ -229,6 +240,10 @@ public class MainActivity extends Activity {
 
         long t = System.currentTimeMillis();
         if (t >= nextWeather) { nextWeather = t + WEATHER_EVERY; fetchWeather(); }
+        if (cache.getBoolean("bg_auto", false) && t >= nextBgChange) {
+            if (nextBgChange != 0) nextBackground(false);
+            nextBgChange = t + BG_AUTO_EVERY;
+        }
         if (t >= nextMatches) { nextMatches = t + MATCHES_EVERY; fetchMatches(); }
 
         if (resumed && ambient.getVisibility() != View.VISIBLE
@@ -421,13 +436,20 @@ public class MainActivity extends Activity {
         appsRow.addView(tile("☾", "شاشة التوقف", null, "#ambient", new Runnable() {
             public void run() { showAmbient(true); }
         }));
+        View bgTile = tile("▣", "الخلفية", null, "#background", new Runnable() {
+            public void run() { nextBackground(true); }
+        });
+        bgTile.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) { toggleAutoBackground(); return true; }
+        });
+        appsRow.addView(bgTile);
         for (final Object[] a : apps) {
             appsRow.addView(tile(null, (String) a[0], (Drawable) a[2], (String) a[1], new Runnable() {
                 public void run() { launchPackage((String) a[1]); }
             }));
         }
         View restore = focusedTag == null ? null : appsRow.findViewWithTag(focusedTag);
-        if (restore == null && appsRow.getChildCount() > 2) restore = appsRow.getChildAt(2);
+        if (restore == null && appsRow.getChildCount() > 3) restore = appsRow.getChildAt(3);
         if (restore != null) restore.requestFocus();
     }
 
@@ -485,6 +507,81 @@ public class MainActivity extends Activity {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
         } catch (Exception ignored) { }
+    }
+
+    // ---------------------------------------------------------------- backgrounds
+
+    private void nextBackground(boolean fromUser) {
+        if (fromUser && needsStoragePermission()) return;
+        if (fromUser) ensureFolders();
+        List<String> all = Backgrounds.all(this);
+        String cur = cache.getString("bg", "g:0");
+        int i = all.indexOf(cur);
+        String next = all.get((i + 1) % all.size());
+        cache.edit().putString("bg", next).apply();
+        applyBackground(next);
+        if (fromUser) {
+            int pics = 0;
+            for (String id : all) if (!Backgrounds.isGradient(id)) pics++;
+            String msg = "الخلفية: " + Backgrounds.name(next) + "  (" + ((all.indexOf(next)) + 1) + " من " + all.size() + ")";
+            if (pics == 0) msg += "\nأضف صورك في المجلد: " + Backgrounds.publicFolder().getAbsolutePath();
+            toast(msg);
+        }
+    }
+
+    private void toggleAutoBackground() {
+        boolean on = !cache.getBoolean("bg_auto", false);
+        cache.edit().putBoolean("bg_auto", on).apply();
+        nextBgChange = System.currentTimeMillis() + BG_AUTO_EVERY;
+        toast(on ? "تغيير الخلفية تلقائيًا كل 15 دقيقة: شغّال" : "تغيير الخلفية تلقائيًا: موقّف");
+    }
+
+    private void applyBackground(final String id) {
+        if (Backgrounds.isGradient(id)) {
+            root.setBackgroundDrawable(Backgrounds.gradient(id));
+            bgImage.setImageDrawable(null);
+            bgImage.setVisibility(View.GONE);
+            bgScrim.setVisibility(View.GONE);
+            return;
+        }
+        new Thread(new Runnable() {
+            public void run() {
+                final android.graphics.Bitmap bmp = Backgrounds.load(MainActivity.this, id);
+                handler.post(new Runnable() {
+                    public void run() {
+                        if (bmp == null) { applyBackground("g:0"); return; }
+                        bgImage.setImageBitmap(bmp);
+                        bgImage.setVisibility(View.VISIBLE);
+                        bgScrim.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void ensureFolders() {
+        try { Backgrounds.publicFolder().mkdirs(); } catch (Exception ignored) { }
+        try { Backgrounds.privateFolder(this).mkdirs(); } catch (Exception ignored) { }
+    }
+
+    private boolean needsStoragePermission() {
+        if (Build.VERSION.SDK_INT < 23) return false;
+        String perm = Build.VERSION.SDK_INT >= 33 ? "android.permission.READ_MEDIA_IMAGES"
+                : "android.permission.READ_EXTERNAL_STORAGE";
+        if (checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) return false;
+        if (cache.getBoolean("asked_storage", false)) return false; // asked once already; use what we can read
+        cache.edit().putBoolean("asked_storage", true).apply();
+        requestPermissions(new String[]{perm}, 1);
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        nextBackground(true);
+    }
+
+    private void toast(String msg) {
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show();
     }
 
     // ---------------------------------------------------------------- input

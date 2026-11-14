@@ -31,6 +31,7 @@ public final class Audio {
             Arrays.sort(files);
             for (File f : files) {
                 String n = f.getName().toLowerCase(Locale.US);
+                if (n.startsWith("iqama")) continue;
                 if (f.isFile() && f.length() > 0 && (n.endsWith(".mp3") || n.endsWith(".ogg")
                         || n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".wav") || n.endsWith(".opus"))) {
                     r.add(f);
@@ -38,6 +39,12 @@ public final class Audio {
             }
         }
         return r;
+    }
+
+    /** The iqama recording, if downloaded. */
+    public static String iqama(Context c) {
+        File f = new File(privateFolder(c), "iqamah.mp3");
+        return f.exists() && f.length() > 0 ? f.getAbsolutePath() : null;
     }
 
     /** Arabic label saved when the pack was downloaded, else the file name. */

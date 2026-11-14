@@ -69,7 +69,7 @@ public class AdhanService extends Service {
             player.prepare();
             player.start();
             playing = true;
-            if (Prefs.shortAdhan(this)) fadeOutAfter(SHORT_SECONDS * 1000L, vol);
+            if (Prefs.shortAdhan(this) && !"الإقامة".equals(intent.getStringExtra("title"))) fadeOutAfter(SHORT_SECONDS * 1000L, vol);
         } catch (Exception e) {
             android.util.Log.w("TVLite", "adhan failed: " + path, e);
             finish();

@@ -126,6 +126,7 @@ public class SettingsActivity extends Activity {
         for (int i : Prefs.PRAYERS) add(new Toggle("أذان " + PrayerTimes.NAMES[i], "adhan_on_" + i, true));
 
         header("الإقامة: كم دقيقة بعد الأذان");
+        add(new Toggle("صوت الإقامة", "iqama_sound", true));
         int[] iq = {25, 0, 20, 20, 10, 20};
         for (int i : Prefs.PRAYERS) add(new Number("إقامة " + PrayerTimes.NAMES[i], "iqama_" + i, iq[i], 0, 60, "دقيقة", false));
 

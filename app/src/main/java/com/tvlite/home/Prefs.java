@@ -24,5 +24,6 @@ public final class Prefs {
     public static int hijriOffset(Context c) { return get(c).getInt("hijri_offset", 0); }
     public static boolean prayerScreen(Context c) { return get(c).getBoolean("prayer_screen", true); }
     public static boolean bringToFront(Context c) { return get(c).getBoolean("bring_front", false); }
+    public static boolean iqamaSound(Context c) { return get(c).getBoolean("iqama_sound", true); }
     public static boolean shortAdhan(Context c) { return get(c).getBoolean("adhan_short", false); }
 }

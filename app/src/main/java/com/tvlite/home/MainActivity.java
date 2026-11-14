@@ -57,6 +57,9 @@ public class MainActivity extends Activity {
     private View bgScrim;
     private long nextBgChange;
     private static final long BG_AUTO_EVERY = 15 * 60 * 1000L;
+    private static final long DAILY = 24 * 60 * 60 * 1000L;
+    private long nextPacks, nextUpdateCheck;
+    private volatile int newBuild = -1;
 
     private int lastMinute = -1;
     private long lastInput = System.currentTimeMillis();
@@ -244,6 +247,8 @@ public class MainActivity extends Activity {
             if (nextBgChange != 0) nextBackground(false);
             nextBgChange = t + BG_AUTO_EVERY;
         }
+        if (t >= nextPacks) { nextPacks = t + DAILY; syncPacks(); }
+        if (t >= nextUpdateCheck) { nextUpdateCheck = t + 6 * 60 * 60 * 1000L; checkUpdate(); }
         if (t >= nextMatches) { nextMatches = t + MATCHES_EVERY; fetchMatches(); }
 
         if (resumed && ambient.getVisibility() != View.VISIBLE
@@ -427,6 +432,11 @@ public class MainActivity extends Activity {
         View focused = getCurrentFocus();
         String focusedTag = focused != null && focused.getTag() != null ? focused.getTag().toString() : null;
         appsRow.removeAllViews();
+        if (newBuild > Updater.installedBuild(this)) {
+            appsRow.addView(tile("⬇", "تحديث جديد", null, "#update", new Runnable() {
+                public void run() { startUpdate(); }
+            }));
+        }
 
         Drawable settingsIcon = null;
         try { settingsIcon = pm.getApplicationIcon("com.android.settings"); } catch (Exception ignored) { }
@@ -449,7 +459,9 @@ public class MainActivity extends Activity {
             }));
         }
         View restore = focusedTag == null ? null : appsRow.findViewWithTag(focusedTag);
-        if (restore == null && appsRow.getChildCount() > 3) restore = appsRow.getChildAt(3);
+        if (restore == null) restore = appsRow.findViewWithTag("#background");
+        if (restore != null && appsRow.indexOfChild(restore) + 1 < appsRow.getChildCount()
+                && focusedTag == null) restore = appsRow.getChildAt(appsRow.indexOfChild(restore) + 1);
         if (restore != null) restore.requestFocus();
     }
 
@@ -507,6 +519,67 @@ public class MainActivity extends Activity {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
         } catch (Exception ignored) { }
+    }
+
+    // ---------------------------------------------------------------- wallpaper packs and updates
+
+    private void syncPacks() {
+        new Thread(new Runnable() {
+            public void run() {
+                Net.init(MainActivity.this);
+                final java.util.List<java.io.File> added = Packs.sync(MainActivity.this);
+                if (added.isEmpty()) return;
+                handler.post(new Runnable() {
+                    public void run() {
+                        // First pictures ever: show the first one and rotate through them.
+                        if (!cache.getBoolean("packs_applied", false)
+                                && Backgrounds.isGradient(cache.getString("bg", "g:0"))) {
+                            String id = added.get(0).getAbsolutePath();
+                            cache.edit().putString("bg", id).putBoolean("bg_auto", true)
+                                    .putBoolean("packs_applied", true).apply();
+                            nextBgChange = System.currentTimeMillis() + BG_AUTO_EVERY;
+                            applyBackground(id);
+                        }
+                        toast("وصلت " + added.size() + " خلفيات جديدة");
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void checkUpdate() {
+        new Thread(new Runnable() {
+            public void run() {
+                Net.init(MainActivity.this);
+                final int latest = Updater.latestBuild();
+                if (latest <= Updater.installedBuild(MainActivity.this)) return;
+                handler.post(new Runnable() {
+                    public void run() {
+                        newBuild = latest;
+                        loadApps();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void startUpdate() {
+        toast("جاري تنزيل التحديث…");
+        new Thread(new Runnable() {
+            public void run() {
+                java.io.File apk = null;
+                try { apk = Updater.download(MainActivity.this); } catch (Exception e) {
+                    android.util.Log.w("TVLite", "update download failed", e);
+                }
+                final java.io.File f = apk;
+                handler.post(new Runnable() {
+                    public void run() {
+                        if (f == null && Build.VERSION.SDK_INT < 24) { toast("ما قدرت أنزّل التحديث، جرّب بعد شوي"); return; }
+                        Updater.install(MainActivity.this, f);
+                    }
+                });
+            }
+        }).start();
     }
 
     // ---------------------------------------------------------------- backgrounds

@@ -108,6 +108,32 @@ public final class Net {
         }
     }
 
+    /** Downloads url into file (via a temp file, so a cut connection never leaves half a picture). */
+    public static void download(String url, java.io.File file) throws Exception {
+        java.io.File tmp = new java.io.File(file.getPath() + ".part");
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        if (factory != null && c instanceof HttpsURLConnection) ((HttpsURLConnection) c).setSSLSocketFactory(factory);
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(30000);
+        c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) TVLite/1.0 (personal TV app)");
+        try {
+            int code = c.getResponseCode();
+            if (code != 200) throw new Exception("HTTP " + code);
+            InputStream in = c.getInputStream();
+            java.io.FileOutputStream out = new java.io.FileOutputStream(tmp);
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            out.close();
+            in.close();
+            if (!tmp.renameTo(file)) throw new Exception("rename failed");
+        } finally {
+            c.disconnect();
+            tmp.delete();
+        }
+    }
+
     private static String readAll(InputStream in) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];

@@ -204,6 +204,17 @@ public class SettingsActivity extends Activity {
             public void run() { showPreview(); }
         }));
 
+        header("شريط الأخبار");
+        add(new Toggle("إظهار شريط الأخبار", "news_on", true));
+        for (Object[] cat : News.CATS) add(new Toggle("أخبار " + cat[1], "news_cat_" + cat[0], true));
+        add(new Number("سرعة الشريط", "news_speed", 1, 0, 2, "", false) {
+            String value() {
+                int v = prefs.getInt(key, def);
+                return v == 0 ? "بطيء" : v == 2 ? "سريع" : "عادي";
+            }
+        });
+        add(new Toggle("الشريط في شاشة التوقف", "news_ambient", false));
+
         header("الشاشة");
         add(new Toggle("شاشة الأذان وعدّاد الإقامة", "prayer_screen", true));
         add(new Toggle("افتح شاشتي وقت الأذان فوق أي تطبيق", "bring_front", false));

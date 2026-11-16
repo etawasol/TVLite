@@ -28,5 +28,8 @@ public final class Prefs {
     public static boolean clockSeconds(Context c) { return get(c).getBoolean("clock_seconds", true); }
     public static boolean iqamaSound(Context c) { return get(c).getBoolean("iqama_sound", true); }
     /** Short adhan (opening, then fade out) for this prayer. */
+    public static boolean newsOn(Context c) { return get(c).getBoolean("news_on", true); }
+    public static int newsSpeed(Context c) { return get(c).getInt("news_speed", 1); }
+    public static boolean newsAmbient(Context c) { return get(c).getBoolean("news_ambient", false); }
     public static boolean shortAdhan(Context c, int i) { return get(c).getBoolean("short_" + i, false); }
 }

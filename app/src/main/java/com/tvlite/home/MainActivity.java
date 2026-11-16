@@ -52,6 +52,9 @@ public class MainActivity extends Activity {
     private LinearLayout matchesList, appsRow;
     private TextView matchesStatus;
     private AmbientView ambient;
+    private TickerView ticker;
+    private long nextNews;
+    private String newsSig = "";
     private PrayerOverlay prayerOverlay;
     private FrameLayout root;
     private ImageView bgImage;
@@ -99,14 +102,39 @@ public class MainActivity extends Activity {
         // Coming back to the home screen re-checks for updates (at most every 10 minutes).
         nextUpdateCheck = Math.min(nextUpdateCheck, lastUpdateCheck + 10 * 60 * 1000L);
         lastMinute = -1;
+        applyNewsPrefs();
         handler.removeCallbacks(tick);
         handler.post(tick);
+    }
+
+    /** Settings may have changed: show or hide the ticker, its speed, and refetch if the sections changed. */
+    private void applyNewsPrefs() {
+        boolean on = Prefs.newsOn(this);
+        ticker.setVisibility(on ? View.VISIBLE : View.GONE);
+        ticker.setSpeed(Prefs.newsSpeed(this));
+        String sig = News.signature(this);
+        if (!sig.equals(newsSig)) {
+            if (newsSig.length() > 0) { News.clearPending(); ticker.clear(); }
+            newsSig = sig;
+            nextNews = 0;
+        }
+    }
+
+    private void fetchNews() {
+        new Thread(new Runnable() {
+            public void run() {
+                Net.init(MainActivity.this);
+                if (News.refresh(MainActivity.this) == 0) nextNews = Clock.now() + 3 * 60 * 1000L;
+            }
+        }).start();
     }
 
     @Override
     protected void onPause() {
         resumed = false;
         handler.removeCallbacks(tick);
+        ticker.setRunning(false);
+        ambient.setTickerRunning(false);
         super.onPause();
     }
 
@@ -202,6 +230,12 @@ public class MainActivity extends Activity {
         matches.addView(matchesList, Ui.lp(-1, -2, 0));
         main.addView(matches, Ui.lp(-1, 0, 1));
 
+        // news ticker
+        ticker = new TickerView(c);
+        LinearLayout.LayoutParams tlp = Ui.lp(-1, -2, 0);
+        tlp.topMargin = Ui.dp(c, 8);
+        main.addView(ticker, tlp);
+
         // apps
         HorizontalScrollView hs = new HorizontalScrollView(c);
         hs.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -270,6 +304,12 @@ public class MainActivity extends Activity {
         if (t >= nextPacks) { nextPacks = t + DAILY; syncPacks(); }
         if (t >= nextUpdateCheck) { lastUpdateCheck = t; nextUpdateCheck = t + 60 * 60 * 1000L; checkUpdate(); }
         if (t >= nextMatches) { nextMatches = t + MATCHES_EVERY; fetchMatches(); }
+        boolean newsOn = Prefs.newsOn(this);
+        if (newsOn && t >= nextNews) { nextNews = t + 15 * 60 * 1000L; fetchNews(); }
+        boolean amb = ambient.getVisibility() == View.VISIBLE;
+        boolean front = resumed && prayerOverlay.getVisibility() != View.VISIBLE;
+        ticker.setRunning(newsOn && front && !amb);
+        ambient.setTickerRunning(newsOn && front && amb && Prefs.newsAmbient(this));
 
         if (resumed && ambient.getVisibility() != View.VISIBLE && prayerOverlay.getVisibility() != View.VISIBLE
                 && t - lastInput > Config.IDLE_MINUTES * 60 * 1000L) {

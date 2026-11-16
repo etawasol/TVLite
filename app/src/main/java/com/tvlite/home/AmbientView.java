@@ -18,6 +18,7 @@ public class AmbientView extends FrameLayout {
     private final TextView time, ampm, date, hijri, next;
     private final LinearLayout digital, info;
     private final AnalogClockView analog;
+    private final TickerView ticker;
     private final Random random = new Random();
     private int lastMinute = -1;
 
@@ -48,6 +49,12 @@ public class AmbientView extends FrameLayout {
         box.addView(analog, new LinearLayout.LayoutParams(1, 1));
         box.addView(info);
         addView(box, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        ticker = new TickerView(c);
+        ticker.setVisibility(GONE);
+        LayoutParams tl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        int m = Ui.dp(c, 16);
+        tl.setMargins(m, 0, m, m);
+        addView(ticker, tl);
         applyPrefs();
     }
 
@@ -76,6 +83,13 @@ public class AmbientView extends FrameLayout {
             analog.setStyle(style);
             analog.setSeconds(Prefs.clockSeconds(getContext()));
         }
+    }
+
+    /** News ticker along the bottom of the screensaver (when chosen in the settings). */
+    public void setTickerRunning(boolean on) {
+        ticker.setVisibility(on ? VISIBLE : GONE);
+        if (on) ticker.setSpeed(Prefs.newsSpeed(getContext()));
+        ticker.setRunning(on);
     }
 
     public void update() {

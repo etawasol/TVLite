@@ -80,25 +80,29 @@ public final class Net {
     }
 
     public static String get(String url) throws Exception {
+        return get(url, "application/json");
+    }
+
+    public static String get(String url, String accept) throws Exception {
         try {
-            return fetch(url);
+            return fetch(url, accept);
         } catch (Exception e) {
             if (url.startsWith("https://")) {
                 try {
-                    return fetch("http://" + url.substring(8));
+                    return fetch("http://" + url.substring(8), accept);
                 } catch (Exception ignored) { }
             }
             throw e;
         }
     }
 
-    private static String fetch(String url) throws Exception {
+    private static String fetch(String url, String accept) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         if (factory != null && c instanceof HttpsURLConnection) ((HttpsURLConnection) c).setSSLSocketFactory(factory);
         c.setConnectTimeout(15000);
         c.setReadTimeout(25000);
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) TVLite/1.0");
-        c.setRequestProperty("Accept", "application/json");
+        c.setRequestProperty("Accept", accept);
         try {
             int code = c.getResponseCode();
             Clock.observe(c.getDate());

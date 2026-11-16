@@ -213,6 +213,9 @@ public class SettingsActivity extends Activity {
                 return v == 0 ? "بطيء" : v == 2 ? "سريع" : "عادي";
             }
         });
+        add(new Toggle("وسم «عاجل» للأخبار الجديدة (آخر نصف ساعة)", "news_breaking", true));
+        add(new Toggle("نتائج مباريات فرقك المباشرة والأهداف", "news_live", true));
+        add(new Toggle("تنبيه قبل الأذان بـ 10 دقائق", "news_prayer", true));
         add(new Toggle("الشريط في شاشة التوقف", "news_ambient", false));
 
         header("الشاشة");

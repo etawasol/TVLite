@@ -33,7 +33,7 @@ public class TickerView extends View {
     private final float gap, pad, barH, radius;
     private float speed; // px per second
     private boolean running;
-    private long last;
+    private long last, nextAsk;
 
     public TickerView(Context c) {
         super(c);
@@ -87,8 +87,9 @@ public class TickerView extends View {
             for (Seg s : segs) s.right += dx;
             while (!segs.isEmpty() && segs.get(0).right - segs.get(0).width > w) segs.remove(0);
             Seg lastSeg = segs.isEmpty() ? null : segs.get(segs.size() - 1);
-            if (lastSeg == null || lastSeg.right - lastSeg.width >= gap) {
+            if ((lastSeg == null || lastSeg.right - lastSeg.width >= gap) && now >= nextAsk) {
                 News.Item it = News.next(getContext());
+                if (it == null) nextAsk = now + 1000;
                 if (it != null) {
                     Seg s = make(it);
                     s.right = lastSeg == null ? 0 : Math.min(lastSeg.right - lastSeg.width - gap, 0);

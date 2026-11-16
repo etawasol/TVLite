@@ -270,11 +270,96 @@ public final class News {
         } catch (Exception ignored) { }
     }
 
+    // ---------------------------------------------------------------- live matches and reminders
+
+    private static final int GOAL = 0xFFE5484D, LIVE = 0xFF1E8449, ALERT = 0xFF16A085, BREAKING = 0xFFE00000;
+    private static final long LIVE_EVERY = 8 * 60 * 1000L, BREAKING_AGE = 30 * 60 * 1000L;
+    private static final List<Item> urgent = new ArrayList<Item>();
+    private static final java.util.Map<String, String> lastScore = new java.util.HashMap<String, String>();
+    private static final java.util.Map<String, Long> liveShown = new java.util.HashMap<String, Long>();
+    private static final java.util.Map<String, Matches.Match> live = new java.util.LinkedHashMap<String, Matches.Match>();
+    private static String reminded = "";
+
+    private static Item special(String label, int color, String title, String source) {
+        Item it = new Item();
+        it.cat = "special";
+        it.label = label;
+        it.color = color;
+        it.title = title;
+        it.source = source;
+        it.norm = "";
+        return it;
+    }
+
+    private static String score(Matches.Match m) {
+        return m.home + " " + m.homeScore + "، " + m.away + " " + m.awayScore;
+    }
+
+    /** Called with the favourite clubs' matches each time they are refreshed: goals and final results. */
+    public static synchronized void setMatches(List<Matches.Match> all) {
+        for (Matches.Match m : all) {
+            String sc = m.homeScore + "-" + m.awayScore;
+            if ("in".equals(m.state)) {
+                String before = lastScore.get(m.id);
+                if (before != null && !before.equals(sc)) {
+                    urgent.add(special("هدف", GOAL, "⚽ " + score(m) + (m.detail.length() > 0 ? " · الدقيقة " + m.detail : ""), m.league));
+                    liveShown.put(m.id, Clock.now());
+                }
+                lastScore.put(m.id, sc);
+                live.put(m.id, m);
+            } else if (live.containsKey(m.id)) {
+                live.remove(m.id);
+                liveShown.remove(m.id);
+                lastScore.remove(m.id);
+                if ("post".equals(m.state)) urgent.add(special("نهاية المباراة", LIVE, score(m), m.league));
+            }
+        }
+    }
+
+    private static synchronized Item specialNext(Context c) {
+        android.content.SharedPreferences p = Prefs.get(c);
+        if (p.getBoolean("news_prayer", true)) {
+            java.util.Calendar now = Clock.cal();
+            int mod = Fmt.minutesOfDay(now);
+            int[] pt = Prayers.times(c, now);
+            for (int i : Prefs.PRAYERS) {
+                int left = pt[i] - mod;
+                String key = now.get(java.util.Calendar.DAY_OF_YEAR) + "/" + i;
+                if (left > 0 && left <= 10 && !reminded.equals(key)) {
+                    reminded = key;
+                    return special("تنبيه", ALERT, "باقي " + minutes(left) + " على أذان " + Prayers.name(now, i), "شاشتي");
+                }
+            }
+        }
+        if (!p.getBoolean("news_live", true)) { urgent.clear(); return null; }
+        if (!urgent.isEmpty()) return urgent.remove(0);
+        long t = Clock.now();
+        for (Matches.Match m : live.values()) {
+            Long last = liveShown.get(m.id);
+            if (last == null || t - last > LIVE_EVERY) {
+                liveShown.put(m.id, t);
+                return special("مباشر", LIVE, score(m) + (m.detail.length() > 0 ? " · الدقيقة " + m.detail : ""), m.league);
+            }
+        }
+        return null;
+    }
+
+    private static String minutes(int n) {
+        if (n == 1) return "دقيقة";
+        if (n == 2) return "دقيقتين";
+        if (n <= 10) return n + " دقائق";
+        return n + " دقيقة";
+    }
+
     // ---------------------------------------------------------------- for the ticker
 
-    /** The next headline to show (and remember it as shown), or null when there is nothing new. */
+    /** The next thing to show (and remember it as shown), or null when there is nothing new. */
     public static Item next(Context c) {
+        Item sp = specialNext(c);
+        if (sp != null) return sp;
+        if (!Prefs.newsOn(c)) return null;
         loadSeen(c);
+        boolean breaking = Prefs.get(c).getBoolean("news_breaking", true);
         while (true) {
             Item it;
             synchronized (pending) {
@@ -283,6 +368,10 @@ public final class News {
             }
             if (!catOn(c, it.cat) || isSeen(it.norm)) continue;
             markShown(c, it);
+            if (breaking && it.time > 0 && Clock.now() - it.time < BREAKING_AGE) {
+                it.label = "عاجل · " + it.label;
+                it.color = BREAKING;
+            }
             return it;
         }
     }

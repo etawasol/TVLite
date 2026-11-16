@@ -109,8 +109,6 @@ public class MainActivity extends Activity {
 
     /** Settings may have changed: show or hide the ticker, its speed, and refetch if the sections changed. */
     private void applyNewsPrefs() {
-        boolean on = Prefs.newsOn(this);
-        ticker.setVisibility(on ? View.VISIBLE : View.GONE);
         ticker.setSpeed(Prefs.newsSpeed(this));
         String sig = News.signature(this);
         if (!sig.equals(newsSig)) {
@@ -308,8 +306,10 @@ public class MainActivity extends Activity {
         if (newsOn && t >= nextNews) { nextNews = t + 15 * 60 * 1000L; fetchNews(); }
         boolean amb = ambient.getVisibility() == View.VISIBLE;
         boolean front = resumed && prayerOverlay.getVisibility() != View.VISIBLE;
-        ticker.setRunning(newsOn && front && !amb);
-        ambient.setTickerRunning(newsOn && front && amb && Prefs.newsAmbient(this));
+        boolean tickerOn = newsOn || Prefs.get(this).getBoolean("news_live", true) || Prefs.get(this).getBoolean("news_prayer", true);
+        ticker.setVisibility(tickerOn ? View.VISIBLE : View.GONE);
+        ticker.setRunning(tickerOn && front && !amb);
+        ambient.setTickerRunning(tickerOn && front && amb && Prefs.newsAmbient(this));
 
         if (resumed && ambient.getVisibility() != View.VISIBLE && prayerOverlay.getVisibility() != View.VISIBLE
                 && t - lastInput > Config.IDLE_MINUTES * 60 * 1000L) {
@@ -399,6 +399,7 @@ public class MainActivity extends Activity {
             }
         }
         List<Matches.Match> list = Matches.arrange(all, 5);
+        News.setMatches(Matches.arrange(all, 50));
         matchesList.removeAllViews();
         boolean live = false;
         for (Matches.Match m : list) {
